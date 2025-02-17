@@ -43,7 +43,10 @@ def generate_pivot(resultados,category):
     elif category == 'CANTON':
         pivot = resultados.pivot_table(index=[f'COD_{category}',f'NOM_{category}'],values='RESULTADOS',columns='NOM_CANDIDATO',aggfunc='sum').reset_index()
     elif category == 'PARROQUIA':
-        pivot = resultados.pivot_table(index=['COD_PROVINCIA','COD_CANTON',f'COD_{category}',f'NOM_{category}'],values='RESULTADOS',columns='NOM_CANDIDATO',aggfunc='sum').reset_index()
+        pivot = resultados.pivot_table(index=['COD_PROVINCIA','NOM_CANTON','COD_CANTON',f'COD_{category}',f'NOM_{category}'],values='RESULTADOS',columns='NOM_CANDIDATO',aggfunc='sum').reset_index()
+        cod_circun = resultados[['COD_CIRCUNSCRIPCION','COD_PARROQUIA']].drop_duplicates()
+        cod_circun = cod_circun.drop_duplicates(subset='COD_PARROQUIA')
+        pivot = pd.merge(pivot,cod_circun,on='COD_PARROQUIA',)
     elif category == 'PARROQUIA_CIRCUNSCRIPCION':
         pivot = resultados.pivot_table(index=['COD_PROVINCIA','COD_CIRCUNSCRIPCION',f'COD_PARROQUIA',f'NOM_PARROQUIA'],values='RESULTADOS',columns='NOM_CANDIDATO',aggfunc='sum').reset_index()
     else:
@@ -74,29 +77,46 @@ def calcular_completas():
     pivot_provincia = generate_pivot(resultados,'PROVINCIA')
     pivot_canton = generate_pivot(resultados,'CANTON')
     pivot_parroquia = generate_pivot(resultados,'PARROQUIA')
-    pivot_circunscripcion = generate_pivot(resultados,'PARROQUIA_CIRCUNSCRIPCION')
+    pivot_parroquia_circunscripcion = generate_pivot(resultados,'PARROQUIA_CIRCUNSCRIPCION')
     # Provincia
     completa_provincias = pd.merge(pivot_provincia,provincias_geojson,on='COD_PROVINCIA')
-    completa_provincias['Diff'] = completa_provincias['P_DANIEL NOBOA AZIN'] - completa_provincias['P_LUISA GONZALEZ']
+    completa_provincias['Diff ADN-RC'] = completa_provincias['P_DANIEL NOBOA AZIN'] - completa_provincias['P_LUISA GONZALEZ']
     completa_provincias['Prop'] = completa_provincias['DANIEL NOBOA AZIN']/completa_provincias['LUISA GONZALEZ']
     completa_provincias['Cat_Prop'] = completa_provincias['Prop'].apply(categorizacion_prop)
     completa_provincias = gpd.GeoDataFrame(completa_provincias, geometry='geometry')
 
     # Canton
     completa_cantones = pd.merge(pivot_canton,cantones_geojson,on='COD_CANTON')
-    completa_cantones['Diff'] = completa_cantones['P_DANIEL NOBOA AZIN'] - completa_cantones['P_LUISA GONZALEZ']
+    completa_cantones['Diff ADN-RC'] = completa_cantones['P_DANIEL NOBOA AZIN'] - completa_cantones['P_LUISA GONZALEZ']
     completa_cantones['Prop'] = completa_cantones['DANIEL NOBOA AZIN']/completa_cantones['LUISA GONZALEZ']
     completa_cantones['Cat_Prop'] = completa_cantones['Prop'].apply(categorizacion_prop)
     completa_cantones = gpd.GeoDataFrame(completa_cantones, geometry='geometry')
     
-    # Canton
+    # Parroquia
     completa_parroquias = pd.merge(pivot_parroquia,parroquias_geojson,on='COD_PARROQUIA')
-    completa_parroquias['Diff'] = completa_parroquias['P_DANIEL NOBOA AZIN'] - completa_parroquias['P_LUISA GONZALEZ']
+    completa_parroquias['Diff ADN-RC'] = completa_parroquias['P_DANIEL NOBOA AZIN'] - completa_parroquias['P_LUISA GONZALEZ']
     completa_parroquias['Prop'] = completa_parroquias['DANIEL NOBOA AZIN']/completa_parroquias['LUISA GONZALEZ']
     completa_parroquias['Cat_Prop'] = completa_parroquias['Prop'].apply(categorizacion_prop)
     completa_parroquias = gpd.GeoDataFrame(completa_parroquias, geometry='geometry')
+    
+    # Parroquia Canton
+    completa_parroquias_canton = pd.merge(pivot_parroquia,parroquias_geojson,on='COD_PARROQUIA',how='left')
+    completa_parroquias_canton['Diff ADN-RC'] = completa_parroquias_canton['P_DANIEL NOBOA AZIN'] - completa_parroquias_canton['P_LUISA GONZALEZ']
+    completa_parroquias_canton['Prop'] = completa_parroquias_canton['DANIEL NOBOA AZIN']/completa_parroquias_canton['LUISA GONZALEZ']
+    completa_parroquias_canton['Cat_Prop'] = completa_parroquias_canton['Prop'].apply(categorizacion_prop)
+    completa_parroquias_canton = gpd.GeoDataFrame(completa_parroquias_canton, geometry='geometry')
+    
+    # Circunscripción Parroquia
+    completa_parroquias_circunscripcion = pd.merge(pivot_parroquia_circunscripcion,parroquias_geojson,on='COD_PARROQUIA',how='left')
+    completa_parroquias_circunscripcion['Diff ADN-RC'] = completa_parroquias_circunscripcion['P_DANIEL NOBOA AZIN'] - completa_parroquias_circunscripcion['P_LUISA GONZALEZ']
+    completa_parroquias_circunscripcion['Prop'] = completa_parroquias_circunscripcion['DANIEL NOBOA AZIN']/completa_parroquias_circunscripcion['LUISA GONZALEZ']
+    completa_parroquias_circunscripcion['Cat_Prop'] = completa_parroquias_circunscripcion['Prop'].apply(categorizacion_prop)
+    completa_parroquias_circunscripcion = gpd.GeoDataFrame(completa_parroquias_circunscripcion, geometry='geometry')    
+    
     for cand in CANDIDATOS:
-        completa_provincias[f'Q_{cand}'] = assign_quintiles(completa_provincias[f'P_{cand}'])    
-        completa_cantones[f'Q_{cand}'] = assign_quintiles(completa_cantones[f'P_{cand}'])    
-        completa_parroquias[f'Q_{cand}'] = assign_quintiles(completa_parroquias[f'P_{cand}'])    
-    return completa_provincias,completa_cantones,completa_parroquias
+        completa_provincias[f'Q_{cand}'] = assign_quintiles(completa_provincias[f'P_{cand}'])
+        completa_cantones[f'Q_{cand}'] = assign_quintiles(completa_cantones[f'P_{cand}'])
+        completa_parroquias[f'Q_{cand}'] = assign_quintiles(completa_parroquias[f'P_{cand}'])
+        completa_parroquias_canton[f'Q_{cand}'] = assign_quintiles(completa_parroquias_canton[f'P_{cand}'].fillna(0))
+        completa_parroquias_circunscripcion[f'Q_{cand}'] = assign_quintiles(completa_parroquias_circunscripcion[f'P_{cand}'].fillna(0))
+    return completa_provincias,completa_cantones,completa_parroquias,completa_parroquias_circunscripcion,completa_parroquias_canton

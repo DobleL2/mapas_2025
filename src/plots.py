@@ -63,7 +63,7 @@ def plot_map(data_geojson, id_column, name_column, value_column, color_map, line
         text = f"{row[id_column]}\n{row[name_column]}" if mostrar_nombres else f"{row[id_column]}"
         ax.annotate(text=text, xy=(centroid.x, centroid.y),
                     xytext=(3, 3), textcoords="offset points",
-                    ha='center', va='center', fontsize=4 if mostrar_nombres else 8, weight='bold')
+                    ha='center', va='center', fontsize=3 if mostrar_nombres else 8, weight='bold')
 
     # Colorear el mapa según los valores
     data_to_plot.plot(ax=ax, linewidth=line_width,
