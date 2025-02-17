@@ -72,7 +72,7 @@ elif authentication_status:
         else:
             cod_provincia = completa_provincias[completa_provincias['NOM_PROVINCIA']==provincia]['COD_PROVINCIA']
             data = completa_cantones[completa_cantones['COD_PROVINCIA']==int(cod_provincia)]
-            canton = col2.selectbox('CANTON',['SELECCIONAR CANTON']+data['NOM_CANTON'].unique().tolist()) 
+            canton = col2.selectbox('CANTON',['SELECCIONAR CANTON']+data['NOM_CANTON'].unique().tolist(),key='5') 
             if canton == 'SELECCIONAR CANTON':
                 fig_1, ax_1 = plot_map(data, "COD_CANTON", "NOM_CANTON", f"Cat_Prop", colores,mostrar_nombres=mostrar_nombres_1)
                 col1.pyplot(fig_1, transparent=True)
@@ -134,7 +134,7 @@ elif authentication_status:
         else:
             cod_provincia = completa_provincias[completa_provincias['NOM_PROVINCIA']==provincia]['COD_PROVINCIA']
             data = completa_cantones[completa_cantones['COD_PROVINCIA']==int(cod_provincia)]
-            canton = col2.selectbox('CANTON',['SELECCIONAR CANTON']+data['NOM_CANTON'].unique().tolist()) 
+            canton = col2.selectbox('CANTON',['SELECCIONAR CANTON']+data['NOM_CANTON'].unique().tolist(),key='6') 
             if canton == 'SELECCIONAR CANTON':
                 fig_1, ax_1 = plot_map(data, "COD_CANTON", "NOM_CANTON", f"Q_{candidato}", colores,mostrar_nombres=mostrar_nombres)
                 col1.pyplot(fig_1, transparent=True)
