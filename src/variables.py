@@ -1,0 +1,23 @@
+
+COLORES = {
+    'DANIEL NOBOA AZIN':"#6e328a",
+    'ANDREA GONZALEZ':"#008001",   
+    'LEONIDAS IZA':"#eac102",
+    'LUISA GONZALEZ':"#04bbeb",
+    'OTROS':"#b20000",
+    'BLANCO':"#4D4D4D",
+    'NULO':"#e96f2d",
+    'AUSENTISMO':"#4b3b2a"
+}
+
+CANDIDATOS = ['DANIEL NOBOA AZIN','ANDREA GONZALEZ','LEONIDAS IZA','LUISA GONZALEZ','OTROS','BLANCO','NULO','AUSENTISMO']
+
+
+COLORES_ADN_RC = {
+    1: "#6e328a",
+    2: "#C283DF",
+    3: "#E9BAFF",
+    4: "#C6F3FF",
+    5: "#78D3EB",
+    6: "#04bbeb"
+}

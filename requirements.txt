@@ -1,0 +1,10 @@
+fastapi
+streamlit
+pandas
+matplotlib
+geopandas
+openpyxl
+xlrd
+bcrypt
+streamlit_authenticator==0.3.2
+ipykernel
