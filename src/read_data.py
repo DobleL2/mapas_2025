@@ -17,9 +17,15 @@ def read_data():
     provincias_geojson = load_geo_data('data/provincias.geojson')
     cantones_geojson = load_geo_data('data/cantones.geojson')
     parroquias_geojson = load_geo_data('data/parroquias.geojson')
-
+    
     resultados = pd.read_excel('data/resultados.xlsx')
     return provincias_geojson,cantones_geojson,parroquias_geojson,resultados
+
+@st.cache_resource
+def leer_resultados_juntas():
+    data = pd.read_csv('data/RESULTADOS_JUNTA.csv')
+    data['NOM_ZONA'] = data['NOM_ZONA'].fillna(' ')
+    return data
 
 def categorizacion_prop(n):
     n = float(n)
