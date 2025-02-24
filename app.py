@@ -36,6 +36,111 @@ authenticator = stauth.Authenticate(
     config['preauthorized']
     )
 
+def mini_dash(data):
+    a = data.groupby(by = 'NOM_CANDIDATO').sum()[['RESULTADOS']].reset_index()
+    res = a.copy()
+    candidatos=['DANIEL NOBOA AZIN',
+                'ANDREA GONZALEZ',
+                'LEONIDAS IZA',
+                'LUISA GONZALEZ',
+                'OTROS']
+    electores = int(a[a['NOM_CANDIDATO']=='ELECTORES']['RESULTADOS'])
+    sufragantes = int(a[a['NOM_CANDIDATO']=='SUFRAGANTES']['RESULTADOS'])
+    blancos = int(a[a['NOM_CANDIDATO']=='BLANCO']['RESULTADOS'])
+    nulos = int(a[a['NOM_CANDIDATO']=='NULO']['RESULTADOS'])
+    ausentismo = electores-sufragantes
+    porcentaje_ausentismo = ausentismo/electores
+    porcentaje_ausentismo = round(round(porcentaje_ausentismo,4)*100,2)
+    porcentaje_ausentismo = str(porcentaje_ausentismo) + ' %'
+    a = a[a['NOM_CANDIDATO'].isin(candidatos)]
+    a['Percentage'] = (a['RESULTADOS'] / a['RESULTADOS'].sum()) * 100
+    validos = int(sum(a['RESULTADOS'])) 
+
+    # Definir el gráfico de barras
+    chart = alt.Chart(a).mark_bar().encode(
+        x=alt.X('NOM_CANDIDATO:N', title="NOM_CANDIDATO"),
+        y=alt.Y('Percentage:Q', title="Percentage (%)", scale=alt.Scale(padding=10)),  # Agregar padding al eje Y
+        color=alt.Color(
+            'NOM_CANDIDATO:N', 
+            scale=alt.Scale(domain=list(COLORES_CANDIDATOS.keys()), 
+                            range=list(COLORES_CANDIDATOS.values())),
+            legend=alt.Legend(title="Candidatos", orient='bottom')
+        ),
+        tooltip=['NOM_CANDIDATO', alt.Tooltip('Percentage:Q', format=".2f")]
+    ).properties(
+        width=600,
+        height=450  # Aumentar altura del gráfico
+    )
+
+    # Agregar etiquetas con los valores de porcentaje sobre las barras
+    text = alt.Chart(a).mark_text(
+        align='center',
+        baseline='bottom',  # Mantener 'bottom' para que se posicione sobre la barra
+        dy=-10,  # Elevar el texto sobre las barras
+        size=14,
+        color='black'
+    ).encode(
+        x='NOM_CANDIDATO:N',
+        y='Percentage:Q',
+        text=alt.Text('Percentage:Q', format=".2f")
+    )
+
+    # Combinar gráficos y aplicar configuraciones globales
+    final_chart = (chart + text).properties(
+        title="-"
+    ).configure_view(
+        strokeWidth=0
+    ).configure_title(
+        fontSize=16,
+        anchor='middle',
+        dy=30  # Mover el título hacia abajo
+    )
+
+    # Layout con columnas
+    col1, col2 = st.columns([3, 1])
+    col2.subheader('Participación')
+    col2.metric('Electores', "{:,}".format(electores))
+    col2.metric('Sufragantes', "{:,}".format(sufragantes))
+    col2.metric('Ausentismo', porcentaje_ausentismo)
+
+    # Mostrar el gráfico en Streamlit
+    col1.subheader('Resultados')
+    col1.altair_chart(final_chart, use_container_width=True)
+
+    
+    bnv = pd.DataFrame({'OPCIONES':['BLANCO','NULO','VALIDOS'],'RESULTADOS':[blancos,nulos,validos]})
+    # Crear gráfico de pastel en Altair con colores personalizados
+    # Calcular porcentajes
+    bnv['PORCENTAJE'] = (bnv['RESULTADOS'] / bnv['RESULTADOS'].sum()) * 100
+    bnv['LABEL'] = bnv['PORCENTAJE'].apply(lambda x: f"{x:.2f}%")  # Formato de porcentaje
+
+    # Definir colores (sustituye con tu diccionario de colores)
+    COLORES_BNV = {'BLANCO': '#FFDDC1', 'NULO': '#FFABAB', 'VALIDOS': '#B5EAD7'}
+
+    # Crear gráfico de pastel con colores personalizados
+    pie_chart = alt.Chart(bnv).mark_arc().encode(
+        theta=alt.Theta(field="RESULTADOS", type="quantitative"),
+        color=alt.Color(field="OPCIONES", type="nominal", 
+                        scale=alt.Scale(domain=list(COLORES_BNV.keys()), 
+                                        range=list(COLORES_BNV.values())),
+                        legend=alt.Legend(orient="bottom")),  # Aplicar escala de colores
+        tooltip=["OPCIONES", "RESULTADOS", "PORCENTAJE"]
+    ).properties(
+        width=300, 
+        height=300
+    )
+
+    # Agregar etiquetas con los valores en porcentaje
+    text_labels = alt.Chart(bnv).mark_text(radius=100, size=14, fontWeight="bold", color="black").encode(
+        theta=alt.Theta(field="RESULTADOS", type="quantitative"),
+        text=alt.Text(field="LABEL", type="nominal"),
+        color=alt.value("black")
+    )
+    col2.subheader("Distribución")
+    col2.altair_chart(pie_chart+text_labels, use_container_width=True)
+    col1.subheader('Resumen')
+    col1.dataframe(res)
+
 name, authentication_status,username = authenticator.login()
 if authentication_status is False:
     st.error('Incorrect username or password')
@@ -242,82 +347,127 @@ elif authentication_status:
                 st.write(mostrar_data_p)
     with tab3:
         st.subheader('Consulta de resultados')
-        provincia = st.selectbox('Provincia:',resultados_juntas['NOM_PROVINCIA'].unique())
-        if provincia:
-            filt_prov = resultados_juntas[resultados_juntas['NOM_PROVINCIA']==provincia]
-            canton = st.selectbox('Canton:',filt_prov['NOM_CANTON'].unique())
-            if canton:
-                filt_canton = filt_prov[filt_prov['NOM_CANTON']==canton]
-                parroquia = st.selectbox('Parroquia:',filt_canton['NOM_PARROQUIA'].unique())
-                if parroquia:
-                    filt_parroquia = filt_canton[filt_canton['NOM_PARROQUIA']==parroquia]
-                    zona = st.selectbox('Zona:',filt_parroquia['NOM_ZONA'].unique())
-                    if zona:
-                        filt_zona = filt_parroquia[filt_parroquia['NOM_ZONA']==zona]
-                        seleccionar_junta = st.selectbox('Seleccionar Junta: ',(filt_zona['NUM_JUNTA'].astype(str) + '-'+filt_zona['SEXO_JUNTA']).unique())
-                        sexo = seleccionar_junta.split('-')[1]
-                        junta = int(seleccionar_junta.split('-')[0])                        
-                        a = filt_zona[(filt_zona['NUM_JUNTA']==junta) & (filt_zona['SEXO_JUNTA']==sexo)].copy()
-                        res = a.copy()
-                        a['Percentage'] = (a['RESULTADOS'] / a['RESULTADOS'].sum()) * 100
-                        candidatos=['DANIEL NOBOA AZIN',
-                                    'ANDREA GONZALEZ',
-                                    'LEONIDAS IZA',
-                                    'LUISA GONZALEZ',
-                                    'OTROS']
-                        electores = int(a[a['NOM_CANDIDATO']=='ELECTORES']['RESULTADOS'])
-                        sufragantes = int(a[a['NOM_CANDIDATO']=='SUFRAGANTES']['RESULTADOS'])
-                        blancos = int(a[a['NOM_CANDIDATO']=='BLANCO']['RESULTADOS'])
-                        nulos = int(a[a['NOM_CANDIDATO']=='NULO']['RESULTADOS'])
-                        ausentismo = electores-sufragantes
-                        porcentaje_ausentismo = ausentismo/electores
-                        porcentaje_ausentismo = round(porcentaje_ausentismo,4)*100
-                        porcentaje_ausentismo = str(porcentaje_ausentismo) + ' %'
-                        a = a[a['NOM_CANDIDATO'].isin(candidatos)]
-                        validos = int(sum(a['RESULTADOS'])) 
-                        bnv = pd.DataFrame({'OPCIONES':['BLANCO','NULO','VALIDOS'],'RESULTADOS':[blancos,nulos,validos]})
-                        # Crear gráfico de barras con valores en porcentaje y colores personalizados
-                        chart = alt.Chart(a).mark_bar().encode(
-                            x=alt.X('NOM_CANDIDATO:N', title="NOM_CANDIDATO"),
-                            y=alt.Y('Percentage:Q', title="Percentage (%)"),
-                            color=alt.Color('NOM_CANDIDATO:N', scale=alt.Scale(domain=list(COLORES_CANDIDATOS.keys()), range=list(COLORES_CANDIDATOS.values()))),
-                            tooltip=['NOM_CANDIDATO', alt.Tooltip('Percentage:Q', format=".2f")]
-                        ).properties(
-                            title="Resultados"
-                        )
-                        # Agregar etiquetas con los valores de porcentaje sobre las barras
-                        text = alt.Chart(a).mark_text(
-                            align='center',
-                            baseline='bottom',
-                            dy=-5,  # Ajusta la posición sobre las barras
-                            size=14,
-                            color='black'
-                        ).encode(
-                            x='NOM_CANDIDATO:N',
-                            y='Percentage:Q',
-                            text=alt.Text('Percentage:Q', format=".2f")  # Formato con 1 decimal
-                        )
-                        col1,col2 = st.columns([5,2])
-                        col2.metric('Electores',electores)
-                        col2.metric('Sufragantes',sufragantes)
-                        col2.metric('Ausentismo',porcentaje_ausentismo)
-                        col1.altair_chart(chart+text, use_container_width=True)
-                        
-                        # Crear gráfico de pastel en Altair con colores personalizados
-                        pie_chart = alt.Chart(bnv).mark_arc().encode(
-                            theta=alt.Theta(field="RESULTADOS", type="quantitative"),
-                            color=alt.Color(field="OPCIONES", type="nominal", scale=alt.Scale(domain=list(COLORES_BNV.keys()), range=list(COLORES_BNV.values()))),  # Aplicar escala de colores
-                            tooltip=["OPCIONES", "RESULTADOS"]
-                        ).properties(
-                            width=400, 
-                            height=400
-                        )
-                        # Agregar etiquetas con los valores
-                        text_labels = alt.Chart(bnv).mark_text(radius=100, size=14, fontWeight="bold", color="black").encode(
-                            theta=alt.Theta(field="RESULTADOS", type="quantitative"),
-                            text=alt.Text(field="RESULTADOS", type="quantitative"),
-                            color=alt.value("black")
-                        )
-
-                        col2.altair_chart(pie_chart+text_labels, use_container_width=True)
-                        col1.write(res)
+        nivel_desgloce = st.radio('Nivel desglose:',['General','Provincia','Canton','Circunscripción','Parroquia','Zona','Junta'],horizontal=True)
+        if nivel_desgloce == 'Provincia':
+            provincia = st.selectbox('Provincia:',resultados_juntas['NOM_PROVINCIA'].unique())
+            if provincia:
+                filt_prov = resultados_juntas[resultados_juntas['NOM_PROVINCIA']==provincia]
+                mini_dash(filt_prov)
+        elif nivel_desgloce == 'General':
+            mini_dash(resultados_juntas)
+        elif nivel_desgloce == 'Canton':
+            provincia = st.selectbox('Provincia:',resultados_juntas['NOM_PROVINCIA'].unique())
+            if provincia:
+                filt_prov = resultados_juntas[resultados_juntas['NOM_PROVINCIA']==provincia]
+                canton = st.selectbox('Canton:',filt_prov['NOM_CANTON'].unique())
+                if canton:
+                    filt_canton = filt_prov[filt_prov['NOM_CANTON']==canton]
+                    mini_dash(filt_canton)
+        elif nivel_desgloce == 'Circunscripción':
+            provincia = st.selectbox('Provincia:',['GUAYAS','PICHINCHA','MANABI'])
+            if provincia:
+                filt_prov = resultados_juntas[resultados_juntas['NOM_PROVINCIA']==provincia]
+                circuns = filt_prov['COD_CIRCUNSCRIPCION'].unique().tolist()
+                circuns.sort()
+                circunscripcion = st.selectbox('Circunscripcion:',circuns)
+                if circunscripcion:
+                    filt_circunscripcion = filt_prov[filt_prov['COD_CIRCUNSCRIPCION']==circunscripcion]
+                    mini_dash(filt_circunscripcion)
+        elif nivel_desgloce == 'Parroquia':
+            tipo = st.radio('Parroquias por',['Circunscripción','Canton'])
+            if tipo == 'Circunscripción':
+                provincia = st.selectbox('Provincia:',['GUAYAS','PICHINCHA','MANABI'])
+                if provincia:
+                    filt_prov = resultados_juntas[resultados_juntas['NOM_PROVINCIA']==provincia]
+                    circuns = filt_prov['COD_CIRCUNSCRIPCION'].unique().tolist()
+                    circuns.sort()
+                    circunscripcion = st.selectbox('Circunscripcion:',circuns)
+                    if circunscripcion:
+                        filt_circunscripcion = filt_prov[filt_prov['COD_CIRCUNSCRIPCION']==circunscripcion]
+                        parroquia = st.selectbox('Parroquia:',filt_circunscripcion['NOM_PARROQUIA'].unique())
+                        if parroquia:
+                            filt_parroquia = filt_circunscripcion[filt_circunscripcion['NOM_PARROQUIA']==parroquia]
+                            mini_dash(filt_parroquia)
+            elif tipo == 'Canton':
+                provincia = st.selectbox('Provincia:',resultados_juntas['NOM_PROVINCIA'].unique())
+                if provincia:
+                    filt_prov = resultados_juntas[resultados_juntas['NOM_PROVINCIA']==provincia]
+                    canton = st.selectbox('Canton:',filt_prov['NOM_CANTON'].unique())
+                    if canton:
+                        filt_canton = filt_prov[filt_prov['NOM_CANTON']==canton]
+                        parroquia = st.selectbox('Parroquia:',filt_canton['NOM_PARROQUIA'].unique())
+                        if parroquia:
+                            filt_parroquia = filt_canton[filt_canton['NOM_PARROQUIA']==parroquia]
+                            mini_dash(filt_parroquia)
+        elif nivel_desgloce == 'Zona':
+            tipo = st.radio('Zonas por',['Circunscripción','Canton'])
+            if tipo == 'Circunscripción':
+                provincia = st.selectbox('Provincia:',['GUAYAS','PICHINCHA','MANABI'])
+                if provincia:
+                    filt_prov = resultados_juntas[resultados_juntas['NOM_PROVINCIA']==provincia]
+                    circuns = filt_prov['COD_CIRCUNSCRIPCION'].unique().tolist()
+                    circuns.sort()
+                    circunscripcion = st.selectbox('Circunscripcion:',circuns)
+                    if circunscripcion:
+                        filt_circunscripcion = filt_prov[filt_prov['COD_CIRCUNSCRIPCION']==circunscripcion]
+                        parroquia = st.selectbox('Parroquia:',filt_circunscripcion['NOM_PARROQUIA'].unique())
+                        if parroquia:
+                            filt_parroquia = filt_circunscripcion[filt_circunscripcion['NOM_PARROQUIA']==parroquia]
+                            zona = st.selectbox('Zona:',filt_parroquia['NOM_ZONA'].unique())
+                            if zona:
+                                filt_zona = filt_parroquia[filt_parroquia['NOM_ZONA']==zona]
+                                mini_dash(filt_zona)
+            elif tipo == 'Canton':
+                provincia = st.selectbox('Provincia:',resultados_juntas['NOM_PROVINCIA'].unique())
+                if provincia:
+                    filt_prov = resultados_juntas[resultados_juntas['NOM_PROVINCIA']==provincia]
+                    canton = st.selectbox('Canton:',filt_prov['NOM_CANTON'].unique())
+                    if canton:
+                        filt_canton = filt_prov[filt_prov['NOM_CANTON']==canton]
+                        parroquia = st.selectbox('Parroquia:',filt_canton['NOM_PARROQUIA'].unique())
+                        if parroquia:
+                            filt_parroquia = filt_canton[filt_canton['NOM_PARROQUIA']==parroquia]
+                            zona = st.selectbox('Zona:',filt_parroquia['NOM_ZONA'].unique())
+                            if zona:
+                                filt_zona = filt_parroquia[filt_parroquia['NOM_ZONA']==zona]
+                                mini_dash(filt_zona)
+        elif nivel_desgloce == 'Junta':
+            tipo = st.radio('Juntas por',['Circunscripción','Canton'])
+            if tipo == 'Circunscripción':
+                provincia = st.selectbox('Provincia:',['GUAYAS','PICHINCHA','MANABI'])
+                if provincia:
+                    filt_prov = resultados_juntas[resultados_juntas['NOM_PROVINCIA']==provincia]
+                    circuns = filt_prov['COD_CIRCUNSCRIPCION'].unique().tolist()
+                    circuns.sort()
+                    circunscripcion = st.selectbox('Circunscripcion:',circuns)
+                    if circunscripcion:
+                        filt_circunscripcion = filt_prov[filt_prov['COD_CIRCUNSCRIPCION']==circunscripcion]
+                        parroquia = st.selectbox('Parroquia:',filt_circunscripcion['NOM_PARROQUIA'].unique())
+                        if parroquia:
+                            filt_parroquia = filt_circunscripcion[filt_circunscripcion['NOM_PARROQUIA']==parroquia]
+                            zona = st.selectbox('Zona:',filt_parroquia['NOM_ZONA'].unique())
+                            if zona:
+                                filt_zona = filt_parroquia[filt_parroquia['NOM_ZONA']==zona]
+                                seleccionar_junta = st.selectbox('Seleccionar Junta: ',(filt_zona['NUM_JUNTA'].astype(str) + '-'+filt_zona['SEXO_JUNTA']).unique())
+                                sexo = seleccionar_junta.split('-')[1]
+                                junta = int(seleccionar_junta.split('-')[0])                        
+                                a = filt_zona[(filt_zona['NUM_JUNTA']==junta) & (filt_zona['SEXO_JUNTA']==sexo)].copy()
+                                mini_dash(a)
+            elif tipo == 'Canton':
+                provincia = st.selectbox('Provincia:',resultados_juntas['NOM_PROVINCIA'].unique())
+                if provincia:
+                    filt_prov = resultados_juntas[resultados_juntas['NOM_PROVINCIA']==provincia]
+                    canton = st.selectbox('Canton:',filt_prov['NOM_CANTON'].unique())
+                    if canton:
+                        filt_canton = filt_prov[filt_prov['NOM_CANTON']==canton]
+                        parroquia = st.selectbox('Parroquia:',filt_canton['NOM_PARROQUIA'].unique())
+                        if parroquia:
+                            filt_parroquia = filt_canton[filt_canton['NOM_PARROQUIA']==parroquia]
+                            zona = st.selectbox('Zona:',filt_parroquia['NOM_ZONA'].unique())
+                            if zona:
+                                filt_zona = filt_parroquia[filt_parroquia['NOM_ZONA']==zona]
+                                seleccionar_junta = st.selectbox('Seleccionar Junta: ',(filt_zona['NUM_JUNTA'].astype(str) + '-'+filt_zona['SEXO_JUNTA']).unique())
+                                sexo = seleccionar_junta.split('-')[1]
+                                junta = int(seleccionar_junta.split('-')[0])                        
+                                a = filt_zona[(filt_zona['NUM_JUNTA']==junta) & (filt_zona['SEXO_JUNTA']==sexo)].copy()
+                                mini_dash(a)
