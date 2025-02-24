@@ -138,8 +138,23 @@ def mini_dash(data):
     )
     col2.subheader("Distribución")
     col2.altair_chart(pie_chart+text_labels, use_container_width=True)
-    col1.subheader('Resumen')
-    col1.dataframe(res)
+    col1.subheader('Resumen Data')
+    c1,c2 = col1.columns(2)
+    c1.write("**Resultados (Votos válidos)**")
+    opciones = ['DANIEL NOBOA AZIN',
+        'ANDREA GONZALEZ',
+        'LEONIDAS IZA',
+        'LUISA GONZALEZ',
+        'OTROS']
+    
+    c1.dataframe(res[res['NOM_CANDIDATO'].isin(opciones)].sort_values(by='RESULTADOS',ascending=False))
+    c2.write("**Votos no válidos**")
+    c2.dataframe(res[res['NOM_CANDIDATO'].isin(['BLANCO','NULO'])])
+    c2.write("**Participación**")
+    c2.dataframe(res[res['NOM_CANDIDATO'].isin(['SUFRAGANTES','ELECTORES'])])
+    
+
+
 
 name, authentication_status,username = authenticator.login()
 if authentication_status is False:
