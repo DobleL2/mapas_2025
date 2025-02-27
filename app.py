@@ -148,7 +148,7 @@ def mini_dash(data):
         'OTROS']
     
     c1.dataframe(res[res['NOM_CANDIDATO'].isin(opciones)].sort_values(by='RESULTADOS',ascending=False))
-    c2.write("**Votos no válidos**")
+    c2.write("**Votos blancos y nulos**")
     c2.dataframe(res[res['NOM_CANDIDATO'].isin(['BLANCO','NULO'])])
     c2.write("**Participación**")
     c2.dataframe(res[res['NOM_CANDIDATO'].isin(['SUFRAGANTES','ELECTORES'])])
